@@ -1,0 +1,73 @@
+version: "3.7"
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:latest
+    container_name: "${NGINX_PROXY_CONTAINER}"
+    restart: always
+    ports:
+    - "${NGINX_PROXY_HOST_PORT}:${NGINX_PROXY_CONTAINER_PORT}"
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      DEFAULT_HOST: "${HOST}"
+    networks:
+    - ystlc-network
+  db:
+    image: mysql:5.7
+    container_name: "${DB_CONTAINER}"
+    ports:
+    - 80:80
+    restart: always
+    volumes:
+    - "${DB_HOST_VOLUME}:/var/lib/mysql"
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+    networks:
+    - ystlc-network
+  api:
+    image: "${API_IMAGE}:${API_IMAGE_TAG}"
+    container_name: "${API_CONTAINER}"
+    restart: always
+    ports:
+    - "${API_CONTAINER_PORT}"
+    environment:
+      COURT_SALT: "${API_COURT_SALT}"
+      IMPORTED_ITI_ROOT_URL: "${API_IMPORTED_ITI_ROOT_URL}"
+      JUDGE_SALT: "${API_JUDGE_SALT}"
+      LIVE_SOURCES_ENABLED: "${API_LIVE_SOURCES_ENABLED}"
+      MUNICIPALITY_SALT: "${API_MUNICIPALITY_SALT}"
+      MYSQL_PASSWORD: "${API_MYSQL_PASSWORD}"
+      MYSQL_URL: "//${DB_CONTAINER}:${DB_CONTAINER_PORT}/${DB_DATABASE}"
+      MYSQL_USERNAME: "${API_MYSQL_USERNAME}"
+      REJIS_PASSWORD: "${API_REJIS_PASSWORD}"
+      REJIS_ROOT_URL: "${API_REJIS_ROOT_URL}"
+      REJIS_USERNAME: "API_REJIS_USERNAME"
+      SPRING_PROFILES_ACTIVE: "${API_SPRING_PROFILES}"
+      TEST_SOURCES_ENABLED: "${API_TEST_SOURCES_ENABLED}"
+      TWILIO_AUTH_TOKEN: "${API_TWILIO_AUTH_TOKEN}"
+      TWILIO_PHONE_NUMBER: "${API_TWILIO_PHONE_NUMBER}"
+      TWILIO_SID: "${API_TWILIO_SID}"
+      TYLER_API_KEY: "${API_TYLER_API_KEY}"
+      TYLER_ROOT_URL: "${API_TYLER_ROOT_URL}"
+    depends_on:
+    - db
+    networks:
+    - ystlc-network
+  client:
+    image: "${CLIENT_IMAGE}:${CLIENT_IMAGE_TAG}"
+    container_name: "${CLIENT_CONTAINER}"
+    restart: always
+    ports:
+    - 80
+    - 443
+    environment:
+      VIRTUAL_HOST: "${HOST}"
+    depends_on:
+    - api
+    - nginx-proxy
+    networks:
+    - ystlc-network
+networks:
+  ystlc-network:
+    driver: bridge
